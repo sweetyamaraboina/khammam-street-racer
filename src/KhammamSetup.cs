@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using Microsoft.Win32;
 
 namespace KhammamSetup
 {
@@ -168,6 +169,26 @@ namespace KhammamSetup
                     CreateShortcut(desktopLnk, exePath, installDir);
                     CreateShortcut(startMenuLnk, exePath, installDir);
                 }
+
+                // Register in Windows Installed Apps (Add/Remove Programs)
+                try
+                {
+                    using (RegistryKey key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\KhammamStreetRacer"))
+                    {
+                        if (key != null)
+                        {
+                            key.SetValue("DisplayName", "Khammam Street Racer");
+                            key.SetValue("DisplayVersion", "1.0.1");
+                            key.SetValue("Publisher", "Khammam Street Racer");
+                            key.SetValue("InstallLocation", installDir);
+                            key.SetValue("DisplayIcon", exePath);
+                            key.SetValue("UninstallString", "cmd.exe /c rmdir /s /q \"" + installDir + "\"");
+                            key.SetValue("NoModify", 1, RegistryValueKind.DWord);
+                            key.SetValue("NoRepair", 1, RegistryValueKind.DWord);
+                        }
+                    }
+                }
+                catch { }
 
                 progressBar.Value = 100;
                 lblStatus.Text = "✅ Installation complete!";
