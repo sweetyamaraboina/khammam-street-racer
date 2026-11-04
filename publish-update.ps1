@@ -110,22 +110,32 @@ function Push-GitHubFile([string]$LocalPath, [string]$RemotePath, [string]$Commi
     $b64 = [Convert]::ToBase64String($bytes)
     $apiUrl = "https://api.github.com/repos/$owner/$repoName/contents/$RemotePath"
 
-    $sha = $null
-    try {
-        $existing = Invoke-RestMethod -Method Get -Uri $apiUrl -Headers $headers
-        $sha = $existing.sha
-    }
-    catch { }
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        try {
+            $sha = $null
+            try {
+                $existing = Invoke-RestMethod -Method Get -Uri $apiUrl -Headers $headers
+                $sha = $existing.sha
+            }
+            catch { }
 
-    $bodyHash = @{
-        message = $CommitMsg
-        content = $b64
-        branch  = "main"
-    }
-    if ($sha) { $bodyHash.sha = $sha }
+            $bodyHash = @{
+                message = $CommitMsg
+                content = $b64
+                branch  = "main"
+            }
+            if ($sha) { $bodyHash.sha = $sha }
 
-    $bodyJson = $bodyHash | ConvertTo-Json -Compress
-    Invoke-RestMethod -Method Put -Uri $apiUrl -Headers $headers -Body $bodyJson -ContentType "application/json" | Out-Null
+            $bodyJson = $bodyHash | ConvertTo-Json -Compress
+            Invoke-RestMethod -Method Put -Uri $apiUrl -Headers $headers -Body $bodyJson -ContentType "application/json" | Out-Null
+            break
+        }
+        catch {
+            if ($attempt -eq 3) { throw $_ }
+            Write-Host "[RETRY] Transient GitHub response, retrying $RemotePath (attempt $($attempt + 1)/3)..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 2
+        }
+    }
 }
 
 Push-GitHubFile "$projDir\github-config.json" "github-config.json" "Configure GitHub auto-updater repo ($owner/$repoName)"
