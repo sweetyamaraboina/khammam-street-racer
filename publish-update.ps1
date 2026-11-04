@@ -146,4 +146,13 @@ Push-GitHubFile "$projDir\publish-update.ps1" "publish-update.ps1" "Add auto-pub
 Push-GitHubFile "$projDir\dist\KhammamStreetRacer.exe" "dist/KhammamStreetRacer.exe" "Publish KhammamStreetRacer.exe v$NewVersion"
 Push-GitHubFile "$projDir\version.json" "version.json" "Bump version to v$NewVersion"
 
-Write-Host "[DONE] Successfully pushed v$NewVersion to https://github.com/$owner/$repoName !" -ForegroundColor Green
+# 8. Also update local installed app & Desktop installer and launch
+try {
+    $desk = [Environment]::GetFolderPath('Desktop')
+    Copy-Item "$projDir\dist\Khammam-Street-Racer-Setup.exe" "$desk\Khammam-Street-Racer-Setup.exe" -Force -ErrorAction SilentlyContinue
+    Start-Process -Wait -FilePath "$projDir\dist\Khammam-Street-Racer-Setup.exe" -ArgumentList "--silent"
+    Start-Process -FilePath "$env:LOCALAPPDATA\KhammamStreetRacer\KhammamStreetRacer.exe" -WorkingDirectory "$env:LOCALAPPDATA\KhammamStreetRacer"
+}
+catch { }
+
+Write-Host "[DONE] Successfully pushed v$NewVersion to https://github.com/$owner/$repoName and updated device!" -ForegroundColor Green
